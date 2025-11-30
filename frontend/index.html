@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CIPHER::VAULT | Zcash FHE Analytics</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700&family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <style>
+        :root {
+            --bg-void: #0a0a0b;
+            --bg-surface: #111113;
+            --bg-elevated: #18181b;
+            --bg-hover: #1f1f23;
+            --border-dim: #27272a;
+            --border-active: #3f3f46;
+            --text-primary: #fafafa;
+            --text-secondary: #a1a1aa;
+            --text-muted: #71717a;
+            --accent-gold: #fbbf24;
+            --accent-gold-dim: rgba(251, 191, 36, 0.15);
+            --accent-gold-glow: rgba(251, 191, 36, 0.4);
+            --accent-emerald: #34d399;
+            --accent-emerald-dim: rgba(52, 211, 153, 0.15);
+            --accent-rose: #fb7185;
+            --accent-rose-dim: rgba(251, 113, 133, 0.15);
+            --accent-violet: #a78bfa;
+            --accent-violet-dim: rgba(167, 139, 250, 0.15);
+            --accent-cyan: #22d3ee;
+            --accent-cyan-dim: rgba(34, 211, 238, 0.15);
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Outfit', sans-serif; background: var(--bg-void); color: var(--text-primary); min-height: 100vh; overflow-x: hidden; }
+        .mono { font-family: 'JetBrains Mono', monospace; }
+        .grid-bg { position: fixed; inset: 0; background-image: linear-gradient(rgba(251, 191, 36, 0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(251, 191, 36, 0.03) 1px, transparent 1px); background-size: 60px 60px; pointer-events: none; z-index: 0; }
+        .grid-bg::before { content: ''; position: absolute; inset: 0; background: radial-gradient(ellipse at 50% 0%, rgba(251, 191, 36, 0.08) 0%, transparent 50%); }
+        .scanlines { position: fixed; inset: 0; background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.1) 2px, rgba(0,0,0,0.1) 4px); pointer-events: none; z-index: 1000; opacity: 0.3; }
+        .nav { position: sticky; top: 0; z-index: 100; background: rgba(10, 10, 11, 0.9); backdrop-filter: blur(20px); border-bottom: 1px solid var(--border-dim); }
+        .nav-inner { max-width: 1400px; margin: 0 auto; padding: 1rem 2rem; display: flex; align-items: center; justify-content: space-between; }
+        .logo { display: flex; align-items: center; gap: 1rem; }
+        .logo-icon { width: 48px; height: 48px; background: linear-gradient(135deg, var(--accent-gold) 0%, #f59e0b 100%); border-radius: 12px; display: flex; align-items: center; justify-content: center; box-shadow: 0 0 30px var(--accent-gold-glow); position: relative; overflow: hidden; }
+        .logo-icon::before { content: ''; position: absolute; inset: 0; background: linear-gradient(45deg, transparent 40%, rgba(255,255,255,0.3) 50%, transparent 60%); animation: shimmer 3s infinite; }
+        @keyframes shimmer { 0% { transform: translateX(-100%); } 100% { transform: translateX(100%); } }
+        .logo-icon svg { width: 28px; height: 28px; color: var(--bg-void); }
+        .logo-text h1 { font-size: 1.25rem; font-weight: 700; letter-spacing: 0.05em; }
+        .logo-text span { font-size: 0.7rem; color: var(--accent-gold); letter-spacing: 0.2em; text-transform: uppercase; }
+        .nav-links { display: flex; align-items: center; gap: 2rem; }
+        .nav-links a { color: var(--text-secondary); text-decoration: none; font-size: 0.85rem; font-weight: 500; transition: color 0.2s; position: relative; }
+        .nav-links a:hover { color: var(--accent-gold); }
+        .nav-links a::after { content: ''; position: absolute; bottom: -4px; left: 0; width: 0; height: 2px; background: var(--accent-gold); transition: width 0.3s; }
+        .nav-links a:hover::after { width: 100%; }
+        .status-badge { display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem 1rem; background: var(--accent-emerald-dim); border: 1px solid rgba(52, 211, 153, 0.3); border-radius: 100px; font-size: 0.75rem; font-weight: 600; color: var(--accent-emerald); }
+        .status-dot { width: 8px; height: 8px; background: var(--accent-emerald); border-radius: 50%; animation: pulse 2s infinite; }
+        @keyframes pulse { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.5; transform: scale(0.8); } }
+        .main { position: relative; z-index: 1; max-width: 1400px; margin: 0 auto; padding: 3rem 2rem; }
+        .hero { text-align: center; padding: 4rem 0; position: relative; }
+        .hero-badge { display: inline-flex; align-items: center; gap: 0.75rem; padding: 0.6rem 1.25rem; background: var(--bg-elevated); border: 1px solid var(--border-dim); border-radius: 100px; font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 2rem; animation: fadeInDown 0.6s ease-out; }
+        .hero-badge-dot { width: 6px; height: 6px; background: var(--accent-gold); border-radius: 50%; animation: pulse 1.5s infinite; }
+        @keyframes fadeInDown { from { opacity: 0; transform: translateY(-20px); } to { opacity: 1; transform: translateY(0); } }
+        .hero h2 { font-size: clamp(2.5rem, 6vw, 4.5rem); font-weight: 800; line-height: 1.1; margin-bottom: 1.5rem; animation: fadeInUp 0.8s ease-out 0.2s both; }
+        .hero h2 .highlight { background: linear-gradient(135deg, var(--accent-gold) 0%, #f59e0b 50%, var(--accent-gold) 100%); background-size: 200% auto; -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; animation: gradientFlow 3s linear infinite; }
+        @keyframes gradientFlow { to { background-position: 200% center; } }
+        @keyframes fadeInUp { from { opacity: 0; transform: translateY(30px); } to { opacity: 1; transform: translateY(0); } }
+        .hero p { font-size: 1.1rem; color: var(--text-secondary); max-width: 700px; margin: 0 auto 3rem; line-height: 1.7; animation: fadeInUp 0.8s ease-out 0.4s both; }
+        .stats-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.5rem; animation: fadeInUp 0.8s ease-out 0.6s both; }
+        @media (max-width: 1024px) { .stats-grid { grid-template-columns: repeat(2, 1fr); } }
+        @media (max-width: 640px) { .stats-grid { grid-template-columns: 1fr; } }
+        .stat-card { background: var(--bg-surface); border: 1px solid var(--border-dim); border-radius: 16px; padding: 1.75rem; position: relative; overflow: hidden; transition: all 0.3s ease; }
+        .stat-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px; background: var(--card-accent, var(--accent-gold)); opacity: 0; transition: opacity 0.3s; }
+        .stat-card:hover { border-color: var(--card-accent, var(--accent-gold)); transform: translateY(-4px); box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3); }
+        .stat-card:hover::before { opacity: 1; }
+        .stat-card.gold { --card-accent: var(--accent-gold); }
+        .stat-card.cyan { --card-accent: var(--accent-cyan); }
+        .stat-card.rose { --card-accent: var(--accent-rose); }
+        .stat-card.violet { --card-accent: var(--accent-violet); }
+        .stat-icon { width: 48px; height: 48px; border-radius: 12px; display: flex; align-items: center; justify-content: center; margin-bottom: 1.25rem; }
+        .stat-card.gold .stat-icon { background: var(--accent-gold-dim); color: var(--accent-gold); }
+        .stat-card.cyan .stat-icon { background: var(--accent-cyan-dim); color: var(--accent-cyan); }
+        .stat-card.rose .stat-icon { background: var(--accent-rose-dim); color: var(--accent-rose); }
+        .stat-card.violet .stat-icon { background: var(--accent-violet-dim); color: var(--accent-violet); }
+        .stat-icon svg { width: 24px; height: 24px; }
+        .stat-value { font-size: 2.25rem; font-weight: 700; margin-bottom: 0.5rem; line-height: 1; }
+        .stat-label { font-size: 0.85rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 0.75rem; }
+        .stat-meta { font-size: 0.75rem; padding: 0.35rem 0.75rem; background: var(--bg-elevated); border-radius: 100px; display: inline-block; }
+        .stat-card.gold .stat-meta { color: var(--accent-gold); }
+        .stat-card.cyan .stat-meta { color: var(--accent-cyan); }
+        .stat-card.rose .stat-meta { color: var(--accent-rose); }
+        .stat-card.violet .stat-meta { color: var(--accent-violet); }
+        .section { margin-top: 5rem; }
+        .section-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 2rem; padding-bottom: 1.5rem; border-bottom: 1px solid var(--border-dim); }
+        .section-title { display: flex; align-items: center; gap: 1rem; }
+        .section-title h3 { font-size: 1.75rem; font-weight: 700; }
+        .section-title .tag { font-size: 0.7rem; padding: 0.4rem 0.75rem; background: var(--accent-gold-dim); color: var(--accent-gold); border-radius: 6px; font-weight: 600; letter-spacing: 0.05em; }
+        .section-subtitle { font-size: 0.9rem; color: var(--text-muted); margin-top: 0.5rem; }
+        .refresh-btn { display: flex; align-items: center; gap: 0.5rem; padding: 0.75rem 1.25rem; background: var(--bg-elevated); border: 1px solid var(--border-dim); border-radius: 10px; color: var(--text-secondary); font-size: 0.85rem; font-weight: 500; cursor: pointer; transition: all 0.2s; }
+        .refresh-btn:hover { background: var(--bg-hover); border-color: var(--accent-gold); color: var(--accent-gold); }
+        .refresh-btn svg { width: 18px; height: 18px; }
+        .cards-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.25rem; }
+        @media (max-width: 1024px) { .cards-grid { grid-template-columns: repeat(2, 1fr); } }
+        @media (max-width: 640px) { .cards-grid { grid-template-columns: 1fr; } }
+        .metric-card { background: var(--bg-surface); border: 1px solid var(--border-dim); border-radius: 16px; padding: 1.5rem; transition: all 0.3s; }
+        .metric-card:hover { border-color: var(--border-active); background: var(--bg-elevated); }
+        .metric-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.25rem; }
+        .metric-icon { width: 44px; height: 44px; border-radius: 10px; display: flex; align-items: center; justify-content: center; }
+        .metric-icon svg { width: 22px; height: 22px; }
+        .metric-badge { font-size: 0.65rem; padding: 0.3rem 0.6rem; border-radius: 6px; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; }
+        .metric-value { font-size: 1.75rem; font-weight: 700; margin-bottom: 0.35rem; }
+        .metric-label { font-size: 0.8rem; color: var(--text-muted); margin-bottom: 0.75rem; }
+        .metric-footer { font-size: 0.75rem; color: var(--text-muted); }
+        .charts-row { display: grid; grid-template-columns: repeat(2, 1fr); gap: 1.5rem; margin-top: 1.5rem; }
+        @media (max-width: 900px) { .charts-row { grid-template-columns: 1fr; } }
+        .chart-card { background: var(--bg-surface); border: 1px solid var(--border-dim); border-radius: 16px; padding: 1.5rem; }
+        .chart-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.5rem; }
+        .chart-title { font-size: 1rem; font-weight: 600; }
+        .chart-meta { font-size: 0.75rem; color: var(--text-muted); }
+        .chart-container { height: 260px; position: relative; }
+        .charts-row-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.5rem; margin-top: 1.5rem; }
+        @media (max-width: 1024px) { .charts-row-3 { grid-template-columns: 1fr; } }
+        .encryption-panel { display: grid; grid-template-columns: repeat(2, 1fr); gap: 1.5rem; margin-top: 1.5rem; }
+        @media (max-width: 900px) { .encryption-panel { grid-template-columns: 1fr; } }
+        .panel-card { background: var(--bg-surface); border: 1px solid var(--border-dim); border-radius: 16px; padding: 1.75rem; }
+        .panel-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.5rem; }
+        .panel-title { font-size: 1.1rem; font-weight: 600; }
+        .panel-badge { font-size: 0.7rem; padding: 0.4rem 0.75rem; border-radius: 6px; font-weight: 600; }
+        .panel-badge.active { background: var(--accent-emerald-dim); color: var(--accent-emerald); }
+        .panel-badge.threshold { background: var(--accent-violet-dim); color: var(--accent-violet); }
+        .spec-list { display: flex; flex-direction: column; gap: 0.75rem; }
+        .spec-item { display: flex; justify-content: space-between; align-items: center; padding: 0.5rem 0; border-bottom: 1px solid var(--border-dim); }
+        .spec-item:last-child { border-bottom: none; }
+        .spec-label { font-size: 0.85rem; color: var(--text-muted); }
+        .spec-value { font-size: 0.85rem; font-weight: 500; }
+        .node-list { display: flex; flex-direction: column; gap: 0.75rem; }
+        .node-item { display: flex; align-items: center; justify-content: space-between; padding: 0.875rem 1rem; background: var(--bg-elevated); border: 1px solid var(--border-dim); border-radius: 10px; transition: all 0.2s; }
+        .node-item:hover { border-color: var(--accent-emerald); }
+        .node-info { display: flex; align-items: center; gap: 0.75rem; }
+        .node-dot { width: 10px; height: 10px; background: var(--accent-emerald); border-radius: 50%; box-shadow: 0 0 10px var(--accent-emerald); }
+        .node-name { font-size: 0.9rem; font-weight: 500; }
+        .node-status { font-size: 0.75rem; color: var(--accent-emerald); font-weight: 500; }
+        .privacy-banner { margin-top: 5rem; background: linear-gradient(135deg, var(--bg-surface) 0%, var(--bg-elevated) 100%); border: 1px solid var(--border-dim); border-radius: 20px; padding: 3rem; text-align: center; position: relative; overflow: hidden; }
+        .privacy-banner::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 4px; background: linear-gradient(90deg, var(--accent-gold), var(--accent-emerald), var(--accent-violet)); }
+        .privacy-banner h3 { font-size: 1.5rem; font-weight: 700; margin-bottom: 1rem; }
+        .privacy-banner p { font-size: 1rem; color: var(--text-secondary); max-width: 800px; margin: 0 auto 2rem; line-height: 1.7; }
+        .privacy-features { display: flex; align-items: center; justify-content: center; gap: 3rem; flex-wrap: wrap; }
+        .privacy-feature { display: flex; align-items: center; gap: 0.75rem; font-size: 0.9rem; color: var(--text-secondary); }
+        .privacy-feature svg { width: 20px; height: 20px; color: var(--accent-emerald); }
+        .footer { margin-top: 5rem; padding: 2rem; border-top: 1px solid var(--border-dim); display: flex; align-items: center; justify-content: space-between; }
+        .footer-left { font-size: 0.85rem; color: var(--text-muted); }
+        .footer-left span { color: var(--accent-gold); font-weight: 600; }
+        .footer-right { display: flex; align-items: center; gap: 1.5rem; font-size: 0.85rem; color: var(--text-muted); }
+        .footer-right a { color: var(--text-secondary); text-decoration: none; transition: color 0.2s; }
+        .footer-right a:hover { color: var(--accent-gold); }
+        .text-gold { color: var(--accent-gold); }
+        .text-emerald { color: var(--accent-emerald); }
+        .text-rose { color: var(--accent-rose); }
+        .text-violet { color: var(--accent-violet); }
+        .text-cyan { color: var(--accent-cyan); }
+        .bg-gold { background: var(--accent-gold-dim); }
+        .bg-emerald { background: var(--accent-emerald-dim); }
+        .bg-rose { background: var(--accent-rose-dim); }
+        .bg-violet { background: var(--accent-violet-dim); }
+        .bg-cyan { background: var(--accent-cyan-dim); }
+        .fade-in-stagger > * { opacity: 0; transform: translateY(20px); animation: fadeInStagger 0.6s ease-out forwards; }
+        .fade-in-stagger > *:nth-child(1) { animation-delay: 0.1s; }
+        .fade-in-stagger > *:nth-child(2) { animation-delay: 0.2s; }
+        .fade-in-stagger > *:nth-child(3) { animation-delay: 0.3s; }
+        .fade-in-stagger > *:nth-child(4) { animation-delay: 0.4s; }
+        @keyframes fadeInStagger { to { opacity: 1; transform: translateY(0); } }
+    </style>
+</head>
+<body>
+    <div class="grid-bg"></div>
+    <div class="scanlines"></div>
+    <nav class="nav">
+        <div class="nav-inner">
+            <div class="logo">
+                <div class="logo-icon">
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
+                </div>
+                <div class="logo-text"><h1>CIPHER::VAULT</h1><span>FHE Analytics Engine</span></div>
+            </div>
+            <div class="nav-links">
+                <a href="#swaps">Swaps</a>
+                <a href="#transactions">Transactions</a>
+                <a href="https://sepolia.etherscan.io/address/0x0eC2862d6480a988d7749e92C590B5a6fe61437f" target="_blank">Oracle</a>
+                <div class="status-badge"><span class="status-dot"></span><span id="healthStatus">OPERATIONAL</span></div>
+            </div>
+        </div>
+    </nav>
+    <main class="main">
+        <section class="hero">
+            <div class="hero-badge"><span class="hero-badge-dot"></span><span class="mono">LIVE ON ETHEREUM SEPOLIA</span></div>
+            <h2>Privacy-Preserving<br/><span class="highlight">Cross-Chain Intelligence</span></h2>
+            <p>Real transaction data from Zashi wallets encrypted with CKKS homomorphic encryption. Threshold decryption reveals only aggregates.</p>
+            <div class="stats-grid fade-in-stagger">
+                <div class="stat-card gold">
+                    <div class="stat-icon"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/></svg></div>
+                    <div class="stat-value" id="heroSwaps">—</div>
+                    <div class="stat-label">Total Swaps</div>
+                    <span class="stat-meta mono" id="swapTrend">LIVE</span>
+                </div>
+                <div class="stat-card cyan">
+                    <div class="stat-icon"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/></svg></div>
+                    <div class="stat-value" id="heroVolume">—</div>
+                    <div class="stat-label">Combined Volume</div>
+                    <span class="stat-meta mono">ZEC TOTAL</span>
+                </div>
+                <div class="stat-card rose">
+                    <div class="stat-icon"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg></div>
+                    <div class="stat-value" id="heroTransactions">—</div>
+                    <div class="stat-label">Shielded TXs</div>
+                    <span class="stat-meta mono">ORCHARD + SAPLING</span>
+                </div>
+                
+            </div>
+        </section>
+        <section id="swaps" class="section">
+            <div class="section-header">
+                <div class="section-title"><div><h3>CrossPay Swap Analytics</h3><p class="section-subtitle">Encrypted with CKKS FHE • Threshold Decrypted Aggregates</p></div><span class="tag mono">ENCRYPTED</span></div>
+                <button class="refresh-btn" onclick="refreshData()"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>Refresh</button>
+            </div>
+            <div class="cards-grid fade-in-stagger">
+                <div class="metric-card"><div class="metric-header"><div class="metric-icon bg-gold text-gold"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/></svg></div><span class="metric-badge bg-gold text-gold">FHE</span></div><div class="metric-value" id="swapCount">—</div><div class="metric-label">Total Swaps</div><div class="metric-footer text-emerald">● Live</div></div>
+                <div class="metric-card"><div class="metric-header"><div class="metric-icon bg-cyan text-cyan"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/></svg></div><span class="metric-badge bg-cyan text-cyan">FHE</span></div><div class="metric-value" id="swapVolume">—</div><div class="metric-label">Total Volume (ZEC)</div><div class="metric-footer" id="swapVolumeUSD">$—</div></div>
+                <div class="metric-card"><div class="metric-header"><div class="metric-icon bg-emerald text-emerald"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg></div><span class="metric-badge bg-emerald text-emerald">FHE</span></div><div class="metric-value" id="swapAverage">—</div><div class="metric-label">Average Swap</div><div class="metric-footer">Per transaction</div></div>
+                <div class="metric-card"><div class="metric-header"><div class="metric-icon bg-rose text-rose"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg></div><span class="metric-badge bg-rose text-rose">FHE</span></div><div class="metric-value" id="swapFees">—</div><div class="metric-label">Total Fees (ZEC)</div><div class="metric-footer" id="swapAvgFee">Avg: —</div></div>
+            </div>
+            <div class="charts-row">
+                <div class="chart-card"><div class="chart-header"><span class="chart-title">Destination Assets</span><span class="chart-meta mono" id="destTotal">0 assets</span></div><div class="chart-container"><canvas id="destinationsChart"></canvas></div></div>
+                <div class="chart-card"><div class="chart-header"><span class="chart-title">Platform Distribution</span><span class="chart-meta mono" id="platformTotal">0 platforms</span></div><div class="chart-container"><canvas id="platformsChart"></canvas></div></div>
+            </div>
+        </section>
+        <section id="transactions" class="section">
+            <div class="section-header"><div class="section-title"><div><h3>Shielded Transaction Analytics</h3><p class="section-subtitle">Orchard & Sapling Pools • Privacy-Preserving Aggregation</p></div><span class="tag mono">PROTECTED</span></div></div>
+            <div class="cards-grid fade-in-stagger">
+                <div class="metric-card"><div class="metric-header"><div class="metric-icon bg-violet text-violet"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg></div><span class="metric-badge bg-violet text-violet">FHE</span></div><div class="metric-value" id="txCount">—</div><div class="metric-label">Total Transactions</div><div class="metric-footer text-violet">● Updating</div></div>
+                <div class="metric-card"><div class="metric-header"><div class="metric-icon bg-cyan text-cyan"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z"/></svg></div><span class="metric-badge bg-cyan text-cyan">FHE</span></div><div class="metric-value" id="txVolume">—</div><div class="metric-label">Total Volume (ZEC)</div><div class="metric-footer">Threshold decrypted</div></div>
+                <div class="metric-card"><div class="metric-header"><div class="metric-icon bg-gold text-gold"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg></div><span class="metric-badge bg-gold text-gold">FHE</span></div><div class="metric-value" id="txAverage">—</div><div class="metric-label">Average Amount</div><div class="metric-footer">Per transaction</div></div>
+                <div class="metric-card"><div class="metric-header"><div class="metric-icon bg-emerald text-emerald"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg></div><span class="metric-badge bg-emerald text-emerald">META</span></div><div class="metric-value" id="txTopPool">—</div><div class="metric-label">Most Used Pool</div><div class="metric-footer text-emerald">Leading</div></div>
+                <div class="metric-card"><div class="metric-header"><div class="metric-icon bg-rose text-rose"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"/></svg></div><span class="metric-badge bg-rose text-rose">FHE</span></div><div class="metric-value" id="txFees">—</div><div class="metric-label">Total Fees (ZEC)</div><div class="metric-footer">Threshold decrypted</div></div>
+            </div>
+            <div class="charts-row-3">
+                <div class="chart-card"><div class="chart-header"><span class="chart-title">Transaction Types</span></div><div class="chart-container"><canvas id="txTypesChart"></canvas></div></div>
+                <div class="chart-card"><div class="chart-header"><span class="chart-title">Pool Usage</span></div><div class="chart-container"><canvas id="txPoolsChart"></canvas></div></div>
+                <div class="chart-card"><div class="chart-header"><span class="chart-title">Platform Distribution</span></div><div class="chart-container"><canvas id="txPlatformsChart"></canvas></div></div>
+            </div>
+        </section>
+        
+        <div class="privacy-banner">
+            <h3>Privacy Guarantee</h3>
+            <p>All individual swap amounts and transaction values are encrypted client-side using CKKS fully homomorphic encryption. Only aggregated statistics are decrypted using threshold cryptography (3-of-5 nodes). Individual amounts are mathematically impossible to reveal.</p>
+            <div class="privacy-features">
+                <div class="privacy-feature"><svg fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg><span>Client-side Encryption</span></div>
+                <div class="privacy-feature"><svg fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg><span>Homomorphic Computation</span></div>
+                <div class="privacy-feature"><svg fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg><span>Threshold Decryption</span></div>
+            </div>
+        </div>
+        <footer class="footer">
+            <div class="footer-left"><span class="mono" style="font-size: 0.75rem; color: var(--text-muted);">CKKS-FHE • 1024-poly • 3-of-5 threshold • ~110-bit security</span></div>
+            <div class="footer-right"><span class="mono">v2.0.0</span><a href="https://github.com/collinsville22/zcash-fhe-analytics" target="_blank">GitHub</a><a href="/api/health" target="_blank">API Health</a></div>
+        </footer>
+    </main>
+    <script src="app.js"></script>
+</body>
+</html>

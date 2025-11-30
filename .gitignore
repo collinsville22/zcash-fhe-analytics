@@ -1,0 +1,67 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+*.egg-info/
+dist/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Build artifacts
+*.o
+*.a
+.build/
+*.xcodeproj
+*.xcworkspace
+build/
+.gradle/
+
+# Logs and temp files
+*.log
+*.txt
+!requirements.txt
+
+# Large archives (never commit)
+*.zip
+
+# Extracted tool directories
+jdk17_extracted/
+gradle-8.5/
+
+# Simulation directories
+android-kotlin-sim/
+android-simulation/
+kotlin-test/
+ios-simulation/
+
+# Helper scripts
+*.bat
+*.ps1
+
+# Node
+node_modules/
+
+# Environment files with secrets
+.env
+!.env.example
+
+# Ethereum build artifacts
+ethereum-oracle/artifacts/
+ethereum-oracle/cache/
+
+# Frontend helper files
+frontend/*.backup
+frontend/*.py

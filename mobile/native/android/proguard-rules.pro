@@ -1,0 +1,3 @@
+-keep class co.electriccoin.zcash.fhe.FHECore { *; }
+-keep class co.electriccoin.zcash.fhe.** { *; }
+-keepclassmembers class co.electriccoin.zcash.fhe.** { *; }

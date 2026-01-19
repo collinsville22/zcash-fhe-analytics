@@ -1,0 +1,85 @@
+namespace zcash_fhe_core {
+    [Throws=FHEError]
+    void load_keys_from_hex(u64 chain_id, string public_key_hex, string crs_hex);
+
+    boolean is_initialized(u64 chain_id);
+
+    [Throws=FHEError]
+    EncryptedInput encrypt_value(u64 chain_id, string account, u64 value, u32 security_zone);
+
+    [Throws=FHEError]
+    EncryptedSwapPayload encrypt_swap(
+        u64 chain_id,
+        string account,
+        u64 amount_in_zatoshi,
+        u64 fee_zatoshi,
+        string destination_asset,
+        string platform,
+        u32 security_zone
+    );
+
+    [Throws=FHEError]
+    EncryptedTransactionPayload encrypt_transaction(
+        u64 chain_id,
+        string account,
+        u64 amount_zatoshi,
+        u64 fee_zatoshi,
+        string transaction_type,
+        string pool_type,
+        string platform,
+        u32 security_zone
+    );
+
+    u64 zec_to_zatoshi(f64 zec);
+    f64 zatoshi_to_zec(u64 zatoshi);
+};
+
+[Error]
+enum FHEError {
+    "KeyDeserializationFailed",
+    "CrsDeserializationFailed",
+    "EncryptionFailed",
+    "ProofGenerationFailed",
+    "InvalidInput",
+    "SerializationFailed",
+    "NetworkFailed",
+    "NotInitialized",
+};
+
+dictionary ChainConfig {
+    u64 chain_id;
+    string cofhe_url;
+    string verifier_url;
+    string threshold_network_url;
+};
+
+dictionary EncryptedInput {
+    string ct_hash;
+    u32 security_zone;
+    u8 utype;
+    string signature;
+    sequence<u8> proof_data;
+};
+
+dictionary EncryptedSwapPayload {
+    EncryptedInput encrypted_amount_in;
+    EncryptedInput encrypted_fee;
+    string destination_asset;
+    string platform;
+};
+
+dictionary EncryptedTransactionPayload {
+    EncryptedInput encrypted_amount;
+    EncryptedInput encrypted_fee;
+    string transaction_type;
+    string pool_type;
+    string platform;
+};
+
+enum FheUintType {
+    "Uint8",
+    "Uint16",
+    "Uint32",
+    "Uint64",
+    "Uint128",
+};

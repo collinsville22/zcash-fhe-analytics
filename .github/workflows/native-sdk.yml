@@ -1,0 +1,160 @@
+name: Native SDK Build
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'mobile/native/**'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'mobile/native/**'
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build-rust:
+    name: Build Rust Core
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-action@stable
+
+      - name: Cache Cargo
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            mobile/native/rust/target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('mobile/native/rust/Cargo.lock') }}
+
+      - name: Build
+        working-directory: mobile/native/rust
+        run: cargo build --release
+
+      - name: Test
+        working-directory: mobile/native/rust
+        run: cargo test
+
+      - name: Clippy
+        working-directory: mobile/native/rust
+        run: cargo clippy -- -D warnings
+
+  build-android:
+    name: Build Android
+    runs-on: ubuntu-latest
+    needs: build-rust
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-action@stable
+
+      - name: Install Android targets
+        run: |
+          rustup target add aarch64-linux-android
+          rustup target add armv7-linux-androideabi
+          rustup target add x86_64-linux-android
+          rustup target add i686-linux-android
+
+      - name: Install cargo-ndk
+        run: cargo install cargo-ndk
+
+      - name: Setup Android NDK
+        uses: android-actions/setup-android@v3
+
+      - name: Cache Cargo
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            mobile/native/rust/target
+          key: ${{ runner.os }}-cargo-android-${{ hashFiles('mobile/native/rust/Cargo.lock') }}
+
+      - name: Build Android
+        working-directory: mobile/native
+        run: |
+          chmod +x scripts/build-android.sh
+          ./scripts/build-android.sh
+
+      - name: Upload Android artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-jniLibs
+          path: mobile/native/android/src/main/jniLibs/
+
+  build-ios:
+    name: Build iOS
+    runs-on: macos-latest
+    needs: build-rust
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-action@stable
+
+      - name: Install iOS targets
+        run: |
+          rustup target add aarch64-apple-ios
+          rustup target add x86_64-apple-ios
+          rustup target add aarch64-apple-ios-sim
+
+      - name: Cache Cargo
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            mobile/native/rust/target
+          key: ${{ runner.os }}-cargo-ios-${{ hashFiles('mobile/native/rust/Cargo.lock') }}
+
+      - name: Build iOS
+        working-directory: mobile/native
+        run: |
+          chmod +x scripts/build-ios.sh
+          ./scripts/build-ios.sh
+
+      - name: Upload iOS artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-xcframework
+          path: mobile/native/ios/ZcashFHECore.xcframework/
+
+  release:
+    name: Create Release
+    runs-on: ubuntu-latest
+    needs: [build-android, build-ios]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download Android artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: android-jniLibs
+          path: release/android/jniLibs
+
+      - name: Download iOS artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: ios-xcframework
+          path: release/ios/ZcashFHECore.xcframework
+
+      - name: Create release archives
+        run: |
+          cd release
+          zip -r android-sdk.zip android/
+          zip -r ios-sdk.zip ios/
+
+      - name: Upload release artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: sdk-release
+          path: |
+            release/android-sdk.zip
+            release/ios-sdk.zip

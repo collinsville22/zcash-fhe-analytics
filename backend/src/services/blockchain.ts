@@ -21,8 +21,18 @@ const CHAIN_MAP = {
 const CONTRACT_ABI = [
   {
     inputs: [
-      { name: "encryptedAmountIn", type: "tuple", components: [{ name: "data", type: "bytes" }] },
-      { name: "encryptedFee", type: "tuple", components: [{ name: "data", type: "bytes" }] },
+      { name: "encryptedAmountIn", type: "tuple", components: [
+        { name: "ctHash", type: "uint256" },
+        { name: "securityZone", type: "uint8" },
+        { name: "utype", type: "uint8" },
+        { name: "signature", type: "bytes" }
+      ]},
+      { name: "encryptedFee", type: "tuple", components: [
+        { name: "ctHash", type: "uint256" },
+        { name: "securityZone", type: "uint8" },
+        { name: "utype", type: "uint8" },
+        { name: "signature", type: "bytes" }
+      ]},
       { name: "destinationAsset", type: "bytes32" },
       { name: "platform", type: "bytes32" },
     ],
@@ -33,8 +43,18 @@ const CONTRACT_ABI = [
   },
   {
     inputs: [
-      { name: "encryptedAmount", type: "tuple", components: [{ name: "data", type: "bytes" }] },
-      { name: "encryptedFee", type: "tuple", components: [{ name: "data", type: "bytes" }] },
+      { name: "encryptedAmount", type: "tuple", components: [
+        { name: "ctHash", type: "uint256" },
+        { name: "securityZone", type: "uint8" },
+        { name: "utype", type: "uint8" },
+        { name: "signature", type: "bytes" }
+      ]},
+      { name: "encryptedFee", type: "tuple", components: [
+        { name: "ctHash", type: "uint256" },
+        { name: "securityZone", type: "uint8" },
+        { name: "utype", type: "uint8" },
+        { name: "signature", type: "bytes" }
+      ]},
       { name: "transactionType", type: "bytes32" },
       { name: "poolType", type: "bytes32" },
       { name: "platform", type: "bytes32" },
@@ -216,8 +236,18 @@ export class BlockchainService {
       abi: CONTRACT_ABI,
       functionName: "ingestSwap",
       args: [
-        { data: encryptedAmountIn.signature as `0x${string}` },
-        { data: encryptedFee.signature as `0x${string}` },
+        {
+          ctHash: BigInt(encryptedAmountIn.ctHash),
+          securityZone: encryptedAmountIn.securityZone,
+          utype: encryptedAmountIn.utype,
+          signature: encryptedAmountIn.signature as `0x${string}`,
+        },
+        {
+          ctHash: BigInt(encryptedFee.ctHash),
+          securityZone: encryptedFee.securityZone,
+          utype: encryptedFee.utype,
+          signature: encryptedFee.signature as `0x${string}`,
+        },
         stringToBytes32(destinationAsset) as `0x${string}`,
         stringToBytes32(platform) as `0x${string}`,
       ],
@@ -241,8 +271,18 @@ export class BlockchainService {
       abi: CONTRACT_ABI,
       functionName: "ingestTransaction",
       args: [
-        { data: encryptedAmount.signature as `0x${string}` },
-        { data: encryptedFee.signature as `0x${string}` },
+        {
+          ctHash: BigInt(encryptedAmount.ctHash),
+          securityZone: encryptedAmount.securityZone,
+          utype: encryptedAmount.utype,
+          signature: encryptedAmount.signature as `0x${string}`,
+        },
+        {
+          ctHash: BigInt(encryptedFee.ctHash),
+          securityZone: encryptedFee.securityZone,
+          utype: encryptedFee.utype,
+          signature: encryptedFee.signature as `0x${string}`,
+        },
         stringToBytes32(transactionType) as `0x${string}`,
         stringToBytes32(poolType || "") as `0x${string}`,
         stringToBytes32(platform) as `0x${string}`,
